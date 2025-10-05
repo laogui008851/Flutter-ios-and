@@ -28,7 +28,7 @@ dependencies:
   openim_common:
     path: ../openim_common
   flutter_openim_sdk:
-    path: ../../open-im-sdk
+    path: ../open-im-sdk
 
 dev_dependencies:
   flutter_test:
