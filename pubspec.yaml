@@ -115,6 +115,7 @@ dependency_overrides:
   video_player_android: 2.7.1  # https://github.com/flutter/flutter/issues/81804
   flutter_webrtc: 0.12.10
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
