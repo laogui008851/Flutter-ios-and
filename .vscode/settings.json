@@ -1,0 +1,6 @@
+{
+  "java.import.gradle.enabled": false,
+  "java.configuration.updateBuildConfiguration": "disabled",
+  "java.project.sourcePaths": [],
+  "dart.flutterSdkPath": ".fvm/versions/3.19.5"
+}

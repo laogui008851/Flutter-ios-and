@@ -1,0 +1,159 @@
+# OpenIM 本地开发环境 Nginx 配置
+
+# WebSocket 连接上游
+upstream im_msg_gateway {
+    server 127.0.0.1:10001;
+}
+
+# OpenIM API 上游
+upstream im_api {
+    server 127.0.0.1:10002;
+}
+
+# Grafana 上游
+upstream im_grafana {
+    server 127.0.0.1:3000;
+}
+
+# Chat API 上游
+upstream im_chat_api {
+    server 127.0.0.1:10008;
+}
+
+# Admin API 上游  
+upstream im_admin_api {
+    server 127.0.0.1:10009;
+}
+
+# OpenRTC 上游
+upstream im_open_rtc {
+    server 127.0.0.1:7880;
+}
+
+# MinIO S3 API 上游
+upstream minio_s3_2 {
+    server 127.0.0.1:10005;
+}
+
+# MinIO Console 上游
+upstream minio_console_2 {
+    server 127.0.0.1:9090;
+}
+
+# 主服务器配置 - admin.local
+server {
+    listen 80;
+    server_name admin.local;
+
+    client_max_body_size 100m;
+
+    # Grafana 监控（完整路径代理，不去除前缀）
+    location /grafana/ {
+        proxy_pass http://im_grafana;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # WebSocket 连接
+    location /msg_gateway {
+        proxy_pass http://im_msg_gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 300s;
+    }
+
+    # OpenIM API
+    location /api/ {
+        proxy_pass http://im_api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # Chat API
+    location /chat/ {
+        proxy_pass http://im_chat_api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Admin API
+    location /complete_admin/ {
+        proxy_pass http://im_admin_api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # OpenRTC
+    location /open_rtc/ {
+        proxy_pass http://im_open_rtc/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # 根路径 - 返回简单提示页面
+    location / {
+        return 200 'OpenIM Admin Portal\n\nAvailable services:\n- Grafana: http://admin.local/grafana/\n- API: http://admin.local/api/\n- Chat API: http://admin.local/chat/\n- Admin API: http://admin.local/complete_admin/\n';
+        add_header Content-Type text/plain;
+    }
+}
+
+# MinIO 服务器配置 - minio.local (Console UI)
+server {
+    listen 80;
+    server_name minio.local;
+
+    # 禁用缓存
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    
+    # MinIO Console UI - 根路径
+    location / {
+        proxy_pass http://minio_console_2/;
+        proxy_http_version 1.1;
+        
+        # WebSocket 支持
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # 反向代理必需的 headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # 禁用缓冲和重定向
+        proxy_buffering off;
+        proxy_redirect off;
+        
+        # 超时设置
+        proxy_connect_timeout 300;
+        proxy_send_timeout 300;
+        proxy_read_timeout 300;
+    }
+}
+
+# MinIO S3 API 服务器 - s3.local  
+server {
+    listen 80;
+    server_name s3.local;
+
+    client_max_body_size 1000m;
+
+    location / {
+        proxy_pass http://minio_s3_2/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
